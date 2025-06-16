@@ -115,7 +115,7 @@ if st.session_state.active_chat_id and st.session_state.active_chat_id in db.get
             st.markdown(message["content"])
 else:
     st.session_state.active_chat_id = None
-    st.info("Start a new conversation by typing below or clicking '➕ New Chat'.")
+    st.info("Start a new conversation by typing below or clicking 'New Chat'.")
 
 if prompt := st.chat_input("What would you like to research?"):
     if st.session_state.active_chat_id is None:
