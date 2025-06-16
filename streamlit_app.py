@@ -11,39 +11,16 @@ DEFAULT_TITLE = "New Chat"
 # --- Main App UI ---
 st.title("SACR AI Research UI")
 
-# --- REVISED: Custom CSS for sidebar buttons ---
+# --- Custom CSS for sidebar buttons ---
+# This CSS now only needs to handle the left-alignment of the main chat buttons.
 st.markdown("""
 <style>
-    /* Target the container of the chat title buttons in the sidebar */
     section[data-testid="stSidebar"] .stButton button {
-        /* Force text alignment to the left */
-        justify-content: left !important;
-        text-align: left !important;
-        
-        /* Ensure the button itself doesn't grow with long text */
+        justify-content: flex-start;
+        text-align: left;
         overflow: hidden;
         white-space: nowrap;
         text-overflow: ellipsis;
-        display: block; /* Required for text-overflow to work */
-    }
-
-    /* Target the popover specifically to remove the bulge and background */
-    section[data-testid="stSidebar"] div[data-testid="stPopover"] > button {
-        /* Make the button itself invisible */
-        background-color: transparent !important;
-        border: none !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        width: auto; /* Allow it to fit the content (the arrow) */
-        
-        /* Position the arrow correctly */
-        display: flex;
-        justify-content: flex-end; /* Push the arrow to the right */
-    }
-    
-    /* Ensure the popover arrow is visible */
-    section[data-testid="stSidebar"] div[data-testid="stPopover"] svg {
-        stroke: currentColor;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -59,7 +36,6 @@ except Exception:
 
 # --- Database Functions (no changes) ---
 def load_db():
-    """Loads the chat database from the JSON file."""
     if not os.path.exists(DB_FILE) or os.path.getsize(DB_FILE) == 0:
         return {'chats': {}}
     try:
@@ -72,12 +48,10 @@ def load_db():
         return {'chats': {}}
 
 def save_db(db):
-    """Saves the chat database to the JSON file."""
     with open(DB_FILE, 'w') as file:
         json.dump(db, file, indent=4)
 
 def generate_title(chat_history):
-    """Generates a title for a chat using OpenAI."""
     history_summary = [{"role": msg["role"], "content": msg["content"][:200]} for msg in chat_history]
     title_prompt = f"""
     Based on the following conversation, generate a short, concise title (4-5 words max).
@@ -102,11 +76,16 @@ def generate_title(chat_history):
 # --- Load Database ---
 db = load_db()
 
+# --- Initialize session state for dialog ---
+if "editing_chat_id" not in st.session_state:
+    st.session_state.editing_chat_id = None
+
 # --- Sidebar for Chat Management ---
 st.sidebar.header("Chat Controls")
 
 if st.sidebar.button("➕ New Chat", use_container_width=True):
     st.session_state.active_chat_id = None
+    st.session_state.editing_chat_id = None # Close dialog if open
     st.rerun()
 
 st.sidebar.subheader("Previous Chats")
@@ -131,26 +110,45 @@ for chat_id in sorted_chat_ids:
             type="primary" if st.session_state.get('active_chat_id') == chat_id else "secondary"
         ):
             st.session_state.active_chat_id = chat_id
+            st.session_state.editing_chat_id = None # Close dialog if open
             st.rerun()
 
     with col2:
-        # Using an empty string for the popover label to hide any icon
-        popover = st.popover("", use_container_width=True, help="Chat options")
-
-        new_title = popover.text_input("Rename", value=chat_title, key=f"rename_{chat_id}")
-        if new_title != chat_title:
-            db['chats'][chat_id]['title'] = new_title
-            save_db(db)
+        # --- REPLACED POPOVER WITH A SIMPLE BUTTON ---
+        if st.button("⋮", key=f"options_{chat_id}", use_container_width=True):
+            st.session_state.editing_chat_id = chat_id # Set state to open the dialog
             st.rerun()
 
-        if popover.button("Delete Chat", key=f"delete_{chat_id}", type="primary", use_container_width=True):
-            del db['chats'][chat_id]
-            if st.session_state.get('active_chat_id') == chat_id:
-                st.session_state.active_chat_id = None
-            save_db(db)
-            st.rerun()
 
-# --- Model Selection (no changes) ---
+# --- NEW: Logic to display the dialog window ---
+if st.session_state.editing_chat_id:
+    chat_id_to_edit = st.session_state.editing_chat_id
+    # Check if the chat still exists before opening the dialog
+    if chat_id_to_edit in db['chats']:
+        chat_to_edit = db['chats'][chat_id_to_edit]
+
+        with st.dialog("Edit Chat") as dialog:
+            # RENAME functionality
+            new_title = st.text_input("New title", value=chat_to_edit['title'])
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("Save"):
+                    db['chats'][chat_id_to_edit]['title'] = new_title
+                    save_db(db)
+                    st.session_state.editing_chat_id = None
+                    st.rerun()
+            with col2:
+                 # DELETE functionality
+                if st.button("Delete Chat", type="primary"):
+                    del db['chats'][chat_id_to_edit]
+                    if st.session_state.get('active_chat_id') == chat_id_to_edit:
+                        st.session_state.active_chat_id = None
+                    save_db(db)
+                    st.session_state.editing_chat_id = None
+                    st.rerun()
+
+# --- Model Selection ---
 st.sidebar.divider()
 st.sidebar.header("Configuration")
 models = ["gpt-4.1-nano", "gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"]
