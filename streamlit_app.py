@@ -120,7 +120,7 @@ for chat_id in sorted_chat_ids:
 
     with col2:
         # --- CHANGED: Using a new icon for the popover ---
-        popover = st.popover("⚙️", use_container_width=True, help="Chat options")
+        popover = st.popover("", use_container_width=True, help="Chat options")
 
         new_title = popover.text_input("Rename", value=chat_title, key=f"rename_{chat_id}")
         if new_title != chat_title:
