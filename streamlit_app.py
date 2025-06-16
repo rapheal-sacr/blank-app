@@ -194,9 +194,8 @@ if prompt := st.chat_input("What would you like to research?"):
     db['chats'][active_chat_id]['messages'].append({"role": "assistant", "content": response})
 
     if db['chats'][active_chat_id]['title'] == DEFAULT_TITLE and len(db['chats'][active_chat_id]['messages']) == 2:
-        with st.spinner("Generating title..."):
-            new_title = generate_title(db['chats'][active_chat_id]['messages'])
-            db['chats'][active_chat_id]['title'] = new_title
+        new_title = generate_title(db['chats'][active_chat_id]['messages'])
+        db['chats'][active_chat_id]['title'] = new_title
         save_db(db)
         st.rerun()
     else:
