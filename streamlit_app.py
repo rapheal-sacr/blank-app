@@ -8,35 +8,31 @@ import time
 DB_FILE = 'db.json'
 DEFAULT_TITLE = "New Chat"
 
-# --- Helper Functions ---
+# --- Main App UI ---
+st.title("SACR AI Research UI")
 
-def truncate_text(text, max_length=35):
-    """Truncates text to a certain length and adds '...' if it's longer."""
-    if len(text) > max_length:
-        return text[:max_length].strip() + "..."
-    return text
-
-# --- Custom CSS for Sidebar ---
+# --- NEW: Custom CSS for sidebar buttons ---
 st.markdown("""
 <style>
-/* Target the buttons in the sidebar */
-[data-testid="stSidebar"] .stButton button {
-    text-align: left !important;
-    justify-content: flex-start !important;
-    padding-left: 10px !important;
-}
-/* Ensure the popover button also aligns left */
-[data-testid="stSidebar"] [data-testid="stPopover"] button {
-    text-align: left !important;
-    justify-content: flex-start !important;
-    padding-left: 10px !important;
-}
+    /* Target the buttons in the sidebar */
+    section[data-testid="stSidebar"] div[data-testid="stButton"] > button {
+        /* Align text to the left */
+        justify-content: flex-start;
+        padding-left: 12px; /* Add some padding */
+        
+        /* Ensure the button itself doesn't grow with long text */
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        display: block; /* Required for text-overflow to work */
+    }
+    /* Target the popover button to make it more compact */
+    section[data-testid="stSidebar"] div[data-testid="stPopover"] > button {
+        padding: 0.25rem 0.5rem;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-
-# --- Main App UI ---
-st.title("SACR AI Research UI")
 
 # Initialize OpenAI client from Streamlit secrets
 try:
@@ -46,7 +42,7 @@ except Exception:
     st.stop()
 
 
-# --- Database Functions ---
+# --- Database Functions (no changes in this section) ---
 def load_db():
     """Loads the chat database from the JSON file."""
     if not os.path.exists(DB_FILE) or os.path.getsize(DB_FILE) == 0:
@@ -77,7 +73,7 @@ def generate_title(chat_history):
     Title:"""
     try:
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4.1-nano",
             messages=[{"role": "user", "content": title_prompt}],
             max_tokens=15,
             temperature=0.2,
@@ -106,62 +102,58 @@ sorted_chat_ids = sorted(
     reverse=True,
 )
 
-# --- NEW: Redesigned Chat list with integrated popover ---
 for chat_id in sorted_chat_ids:
     chat_info = db['chats'][chat_id]
     chat_title = chat_info.get('title', 'Untitled')
-    truncated_title = truncate_text(chat_title)
     
-    # Use the popover as the main button for each chat
-    popover = st.sidebar.popover(
-        truncated_title, 
-        use_container_width=True,
-    )
-
-    # Add options inside the popover
-    if popover.button("Select Chat", key=f"select_{chat_id}", use_container_width=True):
-        st.session_state.active_chat_id = chat_id
-        st.rerun()
-
-    popover.divider()
+    col1, col2 = st.sidebar.columns([0.8, 0.2])
     
-    # RENAME functionality
-    new_title = popover.text_input("Rename", value=chat_title, key=f"rename_{chat_id}", label_visibility="collapsed")
-    if new_title != chat_title and new_title != "":
-        db['chats'][chat_id]['title'] = new_title
-        save_db(db)
-        st.rerun()
+    with col1:
+        if st.button(
+            chat_title, 
+            key=f"select_{chat_id}", 
+            use_container_width=True,
+            type="primary" if st.session_state.get('active_chat_id') == chat_id else "secondary"
+        ):
+            st.session_state.active_chat_id = chat_id
+            st.rerun()
 
-    # DELETE functionality
-    if popover.button("Delete Chat", key=f"delete_{chat_id}", type="primary", use_container_width=True):
-        del db['chats'][chat_id]
-        if st.session_state.get('active_chat_id') == chat_id:
-            st.session_state.active_chat_id = None
-        save_db(db)
-        st.rerun()
+    with col2:
+        # --- CHANGED: Using a new icon for the popover ---
+        popover = st.popover("⚙️", use_container_width=True, help="Chat options")
 
-# --- Model Selection ---
+        new_title = popover.text_input("Rename", value=chat_title, key=f"rename_{chat_id}")
+        if new_title != chat_title:
+            db['chats'][chat_id]['title'] = new_title
+            save_db(db)
+            st.rerun()
+
+        if popover.button("Delete", key=f"delete_{chat_id}", type="primary", use_container_width=True):
+            del db['chats'][chat_id]
+            if st.session_state.get('active_chat_id') == chat_id:
+                st.session_state.active_chat_id = None
+            save_db(db)
+            st.rerun()
+
+# --- Model Selection (no changes) ---
 st.sidebar.divider()
 st.sidebar.header("Configuration")
-models = ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"]
+models = ["gpt-4.1-nano", "gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"]
 st.session_state["openai_model"] = st.sidebar.selectbox("Select OpenAI model", models, index=0)
 
-# --- Main Chat Interface ---
+# --- Main Chat Interface (no changes) ---
 if "active_chat_id" not in st.session_state:
     st.session_state.active_chat_id = sorted_chat_ids[0] if sorted_chat_ids else None
 
 active_chat_id = st.session_state.active_chat_id
 
 if active_chat_id and active_chat_id in db.get('chats', {}):
-    # Highlight the selected chat by rerunning (the button type logic is now implicit)
-    st.sidebar.markdown(f"<style>[data-testid='stPopover'] button:has(span:contains('{truncate_text(db['chats'][active_chat_id]['title'])}')) {{ border: 2px solid #007bff; }}</style>", unsafe_allow_html=True)
-    
     current_chat = db['chats'][active_chat_id]['messages']
     for message in current_chat:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 else:
-    st.info("Start a new conversation by typing below or clicking '➕ New Chat'.")
+    st.info('Start a new conversation by typing below or clicking "New Chat".')
 
 if prompt := st.chat_input("What would you like to research?"):
     if active_chat_id is None:
