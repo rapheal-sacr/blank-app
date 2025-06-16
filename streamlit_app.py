@@ -11,24 +11,24 @@ DEFAULT_TITLE = "New Chat"
 # --- Main App UI ---
 st.title("SACR AI Research UI")
 
-# --- NEW: Custom CSS for sidebar buttons ---
+# --- Custom CSS for sidebar buttons ---
 st.markdown("""
 <style>
-    /* Target the buttons in the sidebar */
-    section[data-testid="stSidebar"] div[data-testid="stButton"] > button {
-        /* Align text to the left */
-        justify-content: flex-start;
-        padding-left: 12px; /* Add some padding */
-        
-        /* Ensure the button itself doesn't grow with long text */
+    /* Target only the main chat select buttons in the first column */
+    div[data-testid="stVerticalBlock"] > div:has(div[data-testid="stHorizontalBlock"]) div[data-testid="stButton"] > button {
+        justify-content: flex-start; /* Align text to the left */
+        padding-left: 12px;
         overflow: hidden;
         white-space: nowrap;
         text-overflow: ellipsis;
         display: block; /* Required for text-overflow to work */
     }
-    /* Target the popover button to make it more compact */
-    section[data-testid="stSidebar"] div[data-testid="stPopover"] > button {
-        padding: 0.25rem 0.5rem;
+    /* Target the popover button to make it compact */
+    div[data-testid="stPopover"] > button {
+        padding: 0;
+        width: 28px; /* Give it a fixed, small width */
+        border: none;
+        background: transparent;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -42,7 +42,7 @@ except Exception:
     st.stop()
 
 
-# --- Database Functions (no changes in this section) ---
+# --- Database Functions ---
 def load_db():
     """Loads the chat database from the JSON file."""
     if not os.path.exists(DB_FILE) or os.path.getsize(DB_FILE) == 0:
@@ -105,13 +105,13 @@ sorted_chat_ids = sorted(
 for chat_id in sorted_chat_ids:
     chat_info = db['chats'][chat_id]
     chat_title = chat_info.get('title', 'Untitled')
-    
-    col1, col2 = st.sidebar.columns([0.8, 0.2])
-    
+
+    col1, col2 = st.sidebar.columns([0.85, 0.15])
+
     with col1:
         if st.button(
-            chat_title, 
-            key=f"select_{chat_id}", 
+            chat_title,
+            key=f"select_{chat_id}",
             use_container_width=True,
             type="primary" if st.session_state.get('active_chat_id') == chat_id else "secondary"
         ):
@@ -119,7 +119,6 @@ for chat_id in sorted_chat_ids:
             st.rerun()
 
     with col2:
-        # --- CHANGED: Using a new icon for the popover ---
         popover = st.popover("", use_container_width=True, help="Chat options")
 
         new_title = popover.text_input("Rename", value=chat_title, key=f"rename_{chat_id}")
@@ -128,20 +127,20 @@ for chat_id in sorted_chat_ids:
             save_db(db)
             st.rerun()
 
-        if popover.button("Delete", key=f"delete_{chat_id}", type="primary", use_container_width=True):
+        if popover.button("Delete Chat", key=f"delete_{chat_id}", type="primary", use_container_width=True):
             del db['chats'][chat_id]
             if st.session_state.get('active_chat_id') == chat_id:
                 st.session_state.active_chat_id = None
             save_db(db)
             st.rerun()
 
-# --- Model Selection (no changes) ---
+# --- Model Selection ---
 st.sidebar.divider()
 st.sidebar.header("Configuration")
 models = ["gpt-4.1-nano", "gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"]
 st.session_state["openai_model"] = st.sidebar.selectbox("Select OpenAI model", models, index=0)
 
-# --- Main Chat Interface (no changes) ---
+# --- Main Chat Interface ---
 if "active_chat_id" not in st.session_state:
     st.session_state.active_chat_id = sorted_chat_ids[0] if sorted_chat_ids else None
 
@@ -164,9 +163,9 @@ if prompt := st.chat_input("What would you like to research?"):
             'messages': [],
             'created_at': time.time()
         }
-    
+
     db['chats'][active_chat_id]['messages'].append({"role": "user", "content": prompt})
-    
+
     with st.chat_message("user"):
         st.markdown(prompt)
 
@@ -177,7 +176,7 @@ if prompt := st.chat_input("What would you like to research?"):
             stream=True,
         )
         response = st.write_stream(stream)
-    
+
     db['chats'][active_chat_id]['messages'].append({"role": "assistant", "content": response})
 
     if db['chats'][active_chat_id]['title'] == DEFAULT_TITLE and len(db['chats'][active_chat_id]['messages']) == 2:
