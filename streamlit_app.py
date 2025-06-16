@@ -99,7 +99,7 @@ for chat_id in sorted_chat_ids:
 
     with col2:
         # The popover for Rename and Delete
-        popover = st.popover("⋮", use_container_width=True)
+        popover = st.popover(use_container_width=True)
 
         # RENAME functionality
         new_title = popover.text_input("Rename", value=chat_title, key=f"rename_{chat_id}")

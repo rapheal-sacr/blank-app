@@ -1,1 +1,18 @@
-{"chat_history": []}
+{
+    "chats": {
+        "1750108357.372417": {
+            "title": "Lions are mammals",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": "Briefly tell me what type of animals are lions with no explanation and comments."
+                },
+                {
+                    "role": "assistant",
+                    "content": "Lions are mammals."
+                }
+            ],
+            "created_at": 1750108357.3724778
+        }
+    }
+}
