@@ -50,7 +50,7 @@ def generate_title(chat_history):
     Title:"""
     try:
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4.1-nano",
             messages=[{"role": "user", "content": title_prompt}],
             max_tokens=15,
             temperature=0.2,
@@ -119,7 +119,7 @@ for chat_id in sorted_chat_ids:
 # --- Model Selection ---
 st.sidebar.divider()
 st.sidebar.header("Configuration")
-models = ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"]
+models = ["gpt-4.1-nano", "gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"]
 st.session_state["openai_model"] = st.sidebar.selectbox("Select OpenAI model", models, index=0)
 
 # --- Main Chat Interface ---
@@ -134,7 +134,7 @@ if active_chat_id and active_chat_id in db.get('chats', {}):
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 else:
-    st.info("Start a new conversation by typing below or clicking '➕ New Chat'.")
+    st.info("Start a new conversation by typing below or clicking 'New Chat'.")
 
 if prompt := st.chat_input("What would you like to research?"):
     if active_chat_id is None:
