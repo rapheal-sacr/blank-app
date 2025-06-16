@@ -86,7 +86,7 @@ for chat_id in sorted_chat_ids:
 # --- Model Selection ---
 st.sidebar.divider()
 st.sidebar.header("Configuration")
-models = ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"]
+models = ["gpt-4.1-nano", "gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"]
 st.session_state["openai_model"] = st.sidebar.selectbox("Select OpenAI model", models, index=0)
 
 # --- Main Chat Interface ---
