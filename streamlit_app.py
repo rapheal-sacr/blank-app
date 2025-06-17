@@ -98,7 +98,7 @@ def edit_chat_dialog(chat_id):
     new_title = st.text_input("New title", value=chat_to_edit['title'])
     
     # --- CHANGED: Using spacer columns to center the buttons ---
-    delete_col, save_col = st.columns([0.26, 0.74])
+    delete_col, save_col = st.columns([0.25, 0.75])
     
     with save_col:
         if st.button("Save title", use_container_width=True):
