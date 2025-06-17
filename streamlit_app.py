@@ -12,15 +12,19 @@ DEFAULT_TITLE = "New Chat"
 st.title("SACR AI Research UI")
 
 # --- Custom CSS for sidebar buttons ---
-# This CSS now only needs to handle the left-alignment of the main chat buttons.
 st.markdown("""
 <style>
-    section[data-testid="stSidebar"] .stButton button {
-        justify-content: flex-start;
-        text-align: left;
+    /* Target the main chat title button in the first column */
+    div[data-testid="stHorizontalBlock"] > div:nth-of-type(1) .stButton button {
+        justify-content: flex-start !important;
+        text-align: left !important;
         overflow: hidden;
         white-space: nowrap;
         text-overflow: ellipsis;
+    }
+    /* Target the options button in the second column */
+    div[data-testid="stHorizontalBlock"] > div:nth-of-type(2) .stButton button {
+        justify-content: center !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -34,7 +38,7 @@ except Exception:
     st.stop()
 
 
-# --- Database Functions (no changes) ---
+# --- Database Functions ---
 def load_db():
     if not os.path.exists(DB_FILE) or os.path.getsize(DB_FILE) == 0:
         return {'chats': {}}
@@ -80,12 +84,45 @@ db = load_db()
 if "editing_chat_id" not in st.session_state:
     st.session_state.editing_chat_id = None
 
+# --- REFACTORED DIALOG LOGIC ---
+@st.dialog("Manage Chat")
+def edit_chat_dialog(chat_id):
+    """This function defines the content of the edit/delete dialog."""
+    if chat_id not in db['chats']:
+        st.warning("Chat not found.")
+        st.session_state.editing_chat_id = None
+        st.rerun()
+
+    chat_to_edit = db['chats'][chat_id]
+    
+    new_title = st.text_input("New title", value=chat_to_edit['title'])
+    
+    # --- CHANGED: Using spacer columns to center the buttons ---
+    delete_col, save_col = st.columns([0.26, 0.74])
+    
+    with save_col:
+        if st.button("Save title", use_container_width=True):
+            db['chats'][chat_id]['title'] = new_title
+            save_db(db)
+            st.session_state.editing_chat_id = None
+            st.rerun()
+            
+    with delete_col:
+        if st.button("Delete chat", type="primary", use_container_width=True):
+            del db['chats'][chat_id]
+            if st.session_state.get('active_chat_id') == chat_id:
+                st.session_state.active_chat_id = None
+            save_db(db)
+            st.session_state.editing_chat_id = None
+            st.rerun()
+
+
 # --- Sidebar for Chat Management ---
 st.sidebar.header("Chat Controls")
 
 if st.sidebar.button("➕ New Chat", use_container_width=True):
     st.session_state.active_chat_id = None
-    st.session_state.editing_chat_id = None # Close dialog if open
+    st.session_state.editing_chat_id = None
     st.rerun()
 
 st.sidebar.subheader("Previous Chats")
@@ -100,53 +137,29 @@ for chat_id in sorted_chat_ids:
     chat_info = db['chats'][chat_id]
     chat_title = chat_info.get('title', 'Untitled')
     
-    col1, col2 = st.sidebar.columns([0.8, 0.2])
+    # --- CHANGED: Adjusted column ratio to reshape buttons ---
+    col1, col2 = st.sidebar.columns([0.85, 0.15])
     
     with col1:
         if st.button(
             chat_title, 
             key=f"select_{chat_id}", 
             use_container_width=True,
+            help="Select chat",
             type="primary" if st.session_state.get('active_chat_id') == chat_id else "secondary"
         ):
             st.session_state.active_chat_id = chat_id
-            st.session_state.editing_chat_id = None # Close dialog if open
+            st.session_state.editing_chat_id = None
             st.rerun()
 
     with col2:
-        # --- REPLACED POPOVER WITH A SIMPLE BUTTON ---
-        if st.button("⋮", key=f"options_{chat_id}", use_container_width=True):
-            st.session_state.editing_chat_id = chat_id # Set state to open the dialog
+        if st.button("⋮", key=f"options_{chat_id}", use_container_width=True, help="Rename chat"):
+            st.session_state.editing_chat_id = chat_id
             st.rerun()
 
-
-# --- NEW: Logic to display the dialog window ---
+# --- Call the dialog function if state is set ---
 if st.session_state.editing_chat_id:
-    chat_id_to_edit = st.session_state.editing_chat_id
-    # Check if the chat still exists before opening the dialog
-    if chat_id_to_edit in db['chats']:
-        chat_to_edit = db['chats'][chat_id_to_edit]
-
-        with st.dialog("Edit Chat") as dialog:
-            # RENAME functionality
-            new_title = st.text_input("New title", value=chat_to_edit['title'])
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("Save"):
-                    db['chats'][chat_id_to_edit]['title'] = new_title
-                    save_db(db)
-                    st.session_state.editing_chat_id = None
-                    st.rerun()
-            with col2:
-                 # DELETE functionality
-                if st.button("Delete Chat", type="primary"):
-                    del db['chats'][chat_id_to_edit]
-                    if st.session_state.get('active_chat_id') == chat_id_to_edit:
-                        st.session_state.active_chat_id = None
-                    save_db(db)
-                    st.session_state.editing_chat_id = None
-                    st.rerun()
+    edit_chat_dialog(st.session_state.editing_chat_id)
 
 # --- Model Selection ---
 st.sidebar.divider()
