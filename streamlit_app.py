@@ -14,6 +14,11 @@ st.title("SACR AI Research UI")
 # --- Custom CSS for sidebar buttons ---
 st.markdown("""
 <style>
+    .css-1jc7ptx, .e1ewe7hr3, .viewerBadge_container__1QSob,
+    .styles_viewerBadge__1yB5_, .viewerBadge_link__1S137,
+    .viewerBadge_text__1JaDK {
+        display: none;
+    }
     /* Target the main chat title button in the first column */
     div[data-testid="stHorizontalBlock"] > div:nth-of-type(1) .stButton button {
         justify-content: flex-start !important;
